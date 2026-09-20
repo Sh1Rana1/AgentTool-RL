@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agenttool-rl"
+version = "0.1.0"
+description = "A verifiable environment for multi-turn tool-use agent reinforcement learning."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [{name = "Sh1Rana1"}]
+keywords = ["agentic-rl", "tool-use", "grpo", "llm-agent", "reinforcement-learning"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+agenttool-validate = "agenttool_rl.validation:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
