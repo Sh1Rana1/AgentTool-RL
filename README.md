@@ -71,7 +71,7 @@ flowchart LR
 
 这条轨迹可以同时回答：任务是否完成、参数是否合法、证据是否真实获得、错误是否被修正，以及完成任务消耗了多少次调用。
 
-## 当前实现：v0.1.0
+## 当前实现：v0.4.0
 
 - 定义 5 个版本化工具契约：`query_logs`、`query_metrics`、`get_dependencies`、`get_recent_deployments`、`submit_diagnosis`；
 - 提供 deployment regression、连接池耗尽、缓存不可用、上游超时和证书过期 5 类示例故障；
