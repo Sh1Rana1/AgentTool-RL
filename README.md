@@ -5,13 +5,13 @@
 [![CI](https://github.com/Sh1Rana1/AgentTool-RL/actions/workflows/ci.yml/badge.svg)](https://github.com/Sh1Rana1/AgentTool-RL/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v0.1.0-5B8DEF)](https://github.com/Sh1Rana1/AgentTool-RL/tree/v0.1.0)
+[![Milestone](https://img.shields.io/badge/milestone-v0.2.0-5B8DEF)](#当前实现v020)
 
 AgentTool-RL 将微服务故障诊断建模为一个可控、可复现的多轮工具调用任务：Agent 需要在有限调用预算内查询日志、指标、依赖关系与发布记录，引用真实获得的证据，并提交根因和处置方案。
 
 项目的目标不是再做一个“能调用工具”的对话 Demo，而是回答一个更具体的问题：**程序化验证中间步骤，能否通过 GRPO 后训练提升小模型的参数生成、证据一致性与错误恢复能力？**
 
-> 当前里程碑：**v0.1.0** 已完成工具契约、场景协议、示例数据、静态验证器和 CI。可执行环境、Reward 与 OpenPipe ART 训练闭环将按路线图逐步接入。
+> 当前里程碑：**v0.2.0** 已完成可执行环境、结构化错误、跨轮证据校验、程序化 Reward，以及带 checksum manifest 的 100 / 20 / 20 数据集。OpenPipe ART 训练闭环将在后续版本接入。
 
 ## 为什么做这个项目
 
@@ -54,7 +54,7 @@ flowchart LR
     P --> A
 ```
 
-环境严格分离 public observation 与 hidden state。根因、必要证据和可接受处置只对环境与 Reward 可见，不进入模型上下文。完整的 episode 生命周期、数据隔离与奖励设计见 [`docs/architecture.md`](docs/architecture.md)。
+环境严格分离 public observation 与 hidden state。task ID、根因、必要证据、完整服务集合和可接受处置均不进入模型 observation。完整的 episode 生命周期与数据隔离见 [`docs/architecture.md`](docs/architecture.md)，奖励系数与防投机约束见 [`docs/reward.md`](docs/reward.md)。
 
 ## 一条典型的 Agent 轨迹
 
@@ -71,14 +71,16 @@ flowchart LR
 
 这条轨迹可以同时回答：任务是否完成、参数是否合法、证据是否真实获得、错误是否被修正，以及完成任务消耗了多少次调用。
 
-## 当前实现：v0.1.0
+## 当前实现：v0.2.0
 
 - 定义 5 个版本化工具契约：`query_logs`、`query_metrics`、`get_dependencies`、`get_recent_deployments`、`submit_diagnosis`；
-- 提供 deployment regression、连接池耗尽、缓存不可用、上游超时和证书过期 5 类示例故障；
-- 为每个场景分离公开告警、隐藏根因、必要证据、可接受处置和期望调查路径；
-- 实现场景静态验证，检查字段完整性、根因枚举、工具引用、任务 ID 唯一性和终止动作；
-- 使用单元测试验证工具 Schema 可序列化、禁止额外参数，并检查隐藏答案不会直接泄漏到用户请求；
-- GitHub Actions 在 Python 3.11 / 3.12 上自动执行数据验证和测试。
+- 实现带调用预算的 `IncidentEnvironment`，支持五类工具的确定性执行、完整 trajectory 记录和终止 / 截断状态；
+- 对参数执行 Schema、枚举、服务、时间窗口与跨轮 evidence 校验，错误以可恢复的结构化结果返回；
+- Reward 同时覆盖任务成功、根因、证据覆盖、处置、参数合法率、错误恢复、重复调用和调用成本；
+- 提供 deployment regression、连接池耗尽、缓存不可用、上游超时和证书过期 5 类场景模板；
+- 使用固定 seed 生成 100 条 train、20 条 validation 和 20 条 test 数据，并记录生成器版本与 SHA-256；
+- 提供可运行的“错误参数 → 读取反馈 → 修正调用 → 成功诊断”示例；
+- 自动测试覆盖隐藏状态隔离、伪造 evidence、错误恢复、预算耗尽、数据确定性及 split 隔离。
 
 ## 快速开始
 
@@ -88,13 +90,16 @@ flowchart LR
 git clone https://github.com/Sh1Rana1/AgentTool-RL.git
 cd AgentTool-RL
 python scripts/validate_examples.py
+python scripts/verify_dataset.py
 python -m unittest discover -s tests -v
+python scripts/run_demo.py
 ```
 
 预期数据检查结果：
 
 ```text
 Validated 5 scenarios and 5 tool contracts.
+Verified 140 scenarios across 3 disjoint, reproducible splits.
 ```
 
 ## 评测协议
@@ -115,7 +120,7 @@ Validated 5 scenarios and 5 tool contracts.
 | 版本 | 关键交付 | 状态 |
 | --- | --- | --- |
 | v0.1 | 工具契约、场景协议、示例数据、验证器与 CI | **Completed** |
-| v0.2 | 有状态环境、工具执行器、程序化 Reward 与数据生成器 | Planned |
+| v0.2 | 有状态环境、工具执行器、程序化 Reward 与数据生成器 | **Completed** |
 | v0.3 | Random / Rule-based / Base LLM baseline 与统一 evaluator | Planned |
 | v0.4 | OpenPipe ART 多轮 trajectory 与并发 rollout | Planned |
 | v0.5 | Qwen2.5 + LoRA 的 GRPO smoke test、checkpoint 保存与重载 | Planned |
@@ -126,10 +131,11 @@ Validated 5 scenarios and 5 tool contracts.
 ```text
 AgentTool-RL/
 ├── data/examples/          # 人工审阅的代表性故障场景
+├── data/generated/         # 固定 seed 的 train / validation / test
 ├── docs/                   # 架构、状态隔离、奖励与评测协议
-├── scripts/                # 数据验证入口
-├── src/agenttool_rl/       # 工具契约与场景验证逻辑
-└── tests/                  # 契约与数据一致性测试
+├── scripts/                # 数据生成、验证和可执行演示
+├── src/agenttool_rl/       # 环境、工具、Reward 与生成器
+└── tests/                  # 环境、奖励、契约和数据测试
 ```
 
 ## 技术栈与边界

@@ -17,6 +17,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Validate example scenarios
         run: python scripts/validate_examples.py
+      - name: Verify generated dataset
+        run: python scripts/verify_dataset.py
       - name: Run tests
         run: python -m unittest discover -s tests -v
-

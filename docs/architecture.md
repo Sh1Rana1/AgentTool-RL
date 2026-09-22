@@ -44,9 +44,9 @@ The environment keeps public and hidden state separate. Public state contains th
 
 Errors are structured as `{error_type, message, recoverable}` so an agent can learn to repair a call rather than merely receive a negative terminal reward.
 
-## Planned reward components
+## Reward components
 
-The exact coefficients will be frozen in v0.2 before training data is generated.
+The v0.2 coefficients are frozen and implemented as a deterministic cumulative score. The environment returns the difference between consecutive cumulative scores as the per-step reward.
 
 | Event | Direction | Purpose |
 | --- | --- | --- |
@@ -59,6 +59,8 @@ The exact coefficients will be frozen in v0.2 before training data is generated.
 | Redundant call | Negative | Control interaction cost |
 | Unsupported diagnosis | Negative | Discourage guessing without evidence |
 
+Exact coefficients, success conditions, and anti-reward-hacking constraints are documented in [`reward.md`](reward.md).
+
 ## Data split contract
 
 - Train, validation, and test IDs are disjoint.
@@ -69,5 +71,4 @@ The exact coefficients will be frozen in v0.2 before training data is generated.
 
 ## Version gates
 
-Each release must be independently runnable and may only claim behavior demonstrated by that tag. Training-effect claims require v0.6 experiment artifacts; earlier releases may claim pipeline completion but not performance improvement.
-
+Each release must be independently runnable and may only claim behavior demonstrated by that version. Training-effect claims require v0.6 experiment artifacts; earlier releases may claim pipeline completion but not performance improvement.

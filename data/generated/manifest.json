@@ -1,0 +1,21 @@
+{
+  "generator_version": "0.2.0",
+  "seed": 42,
+  "splits": {
+    "test": {
+      "count": 20,
+      "file": "test.jsonl",
+      "sha256": "32368db7e7af6d76ed099692343966d0f34c7efaa81a0b73764f2eac650ae05b"
+    },
+    "train": {
+      "count": 100,
+      "file": "train.jsonl",
+      "sha256": "ccf68827729c2773662d2598ba45e90c97d9097907a90177f485ef135668ffcf"
+    },
+    "validation": {
+      "count": 20,
+      "file": "validation.jsonl",
+      "sha256": "739d47e5a2a6022da56fe797224f9400f845b036b829973897e82efb98d80a35"
+    }
+  }
+}
