@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## [0.3.0] - 2026-09-22
+
+### Added
+
+- Shared stateful Agent interface and episode runner.
+- Seeded Random and interpretable Rule-based baselines.
+- OpenAI-compatible Base LLM tool-calling baseline with native and JSON fallback parsing.
+- Bounded action-format correction for endpoints that ignore required tool choice.
+- Unified task, schema, semantic, evidence, recovery, cost, and reward metrics.
+- Deterministic JSON and Markdown evaluation reports with per-episode results.
+- Frozen Random and Rule-based sanity-check results on the 20-scenario test split.
+- A real Qwen2.5-1.5B/Ollama baseline report and single-episode trajectory exporter.
+- Tests for baseline behavior, tool-call parsing, metric aggregation, and report output.
+
 ## [0.2.0] - 2026-09-22
 
 ### Added

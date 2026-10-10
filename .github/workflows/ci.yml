@@ -21,3 +21,5 @@ jobs:
         run: python scripts/verify_dataset.py
       - name: Run tests
         run: python -m unittest discover -s tests -v
+      - name: Run baseline smoke evaluation
+        run: python scripts/evaluate_baselines.py --agents random,rule --dataset data/examples/scenarios.jsonl --output artifacts/ci-baselines.json

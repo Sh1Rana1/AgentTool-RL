@@ -5,13 +5,13 @@
 [![CI](https://github.com/Sh1Rana1/AgentTool-RL/actions/workflows/ci.yml/badge.svg)](https://github.com/Sh1Rana1/AgentTool-RL/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Milestone](https://img.shields.io/badge/milestone-v0.2.0-5B8DEF)](#当前实现v020)
+[![Milestone](https://img.shields.io/badge/milestone-v0.3.0-5B8DEF)](#当前实现v030)
 
 AgentTool-RL 将微服务故障诊断建模为一个可控、可复现的多轮工具调用任务：Agent 需要在有限调用预算内查询日志、指标、依赖关系与发布记录，引用真实获得的证据，并提交根因和处置方案。
 
 项目的目标不是再做一个“能调用工具”的对话 Demo，而是回答一个更具体的问题：**程序化验证中间步骤，能否通过 GRPO 后训练提升小模型的参数生成、证据一致性与错误恢复能力？**
 
-> 当前里程碑：**v0.2.0** 已完成可执行环境、结构化错误、跨轮证据校验、程序化 Reward，以及带 checksum manifest 的 100 / 20 / 20 数据集。OpenPipe ART 训练闭环将在后续版本接入。
+> 当前里程碑：**v0.3.0** 已完成可执行环境、程序化 Reward、100 / 20 / 20 数据集，以及 Random、Rule-based、Base LLM 三类统一评测入口。OpenPipe ART 训练闭环将在后续版本接入。
 
 ## 为什么做这个项目
 
@@ -71,7 +71,7 @@ flowchart LR
 
 这条轨迹可以同时回答：任务是否完成、参数是否合法、证据是否真实获得、错误是否被修正，以及完成任务消耗了多少次调用。
 
-## 当前实现：v0.2.0
+## 当前实现：v0.3.0
 
 - 定义 5 个版本化工具契约：`query_logs`、`query_metrics`、`get_dependencies`、`get_recent_deployments`、`submit_diagnosis`；
 - 实现带调用预算的 `IncidentEnvironment`，支持五类工具的确定性执行、完整 trajectory 记录和终止 / 截断状态；
@@ -79,8 +79,22 @@ flowchart LR
 - Reward 同时覆盖任务成功、根因、证据覆盖、处置、参数合法率、错误恢复、重复调用和调用成本；
 - 提供 deployment regression、连接池耗尽、缓存不可用、上游超时和证书过期 5 类场景模板；
 - 使用固定 seed 生成 100 条 train、20 条 validation 和 20 条 test 数据，并记录生成器版本与 SHA-256；
-- 提供可运行的“错误参数 → 读取反馈 → 修正调用 → 成功诊断”示例；
-- 自动测试覆盖隐藏状态隔离、伪造 evidence、错误恢复、预算耗尽、数据确定性及 split 隔离。
+- 实现 Random、Rule-based 和 OpenAI-compatible Base LLM Agent，共用相同的状态接口和 episode runner；
+- 统一计算任务成功率、参数合法率、语义准确率、证据有效性、错误恢复率、调用成本和 Reward；
+- 在冻结 test split 上产出可复现的逐 episode JSON 与 Markdown 报告；
+- 自动测试覆盖隐藏状态隔离、伪造 evidence、错误恢复、预算耗尽、数据确定性、Agent 行为和指标聚合。
+
+## V0.3 Baseline
+
+配置：20 个冻结测试场景、每个 episode 最多 6 次工具调用、Random seed 42。
+
+| Agent | Success | Diagnosis | Schema valid | Semantic valid | Evidence coverage | Invalid calls | Avg calls | Avg reward |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Random | 0.0% | 5.0% | 100.0% | 97.5% | 40.0% | 2.5% | 6.00 | -0.215 |
+| Rule-based | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 0.0% | 3.00 | 2.040 |
+| Qwen2.5-1.5B Base | 0.0% | 5.0% | 92.9% | 70.2% | 17.5% | 34.8% | 5.60 | -0.390 |
+
+Rule-based 针对五类已知模板编写，用于验证环境可解性，并非学习得到的泛化结果。Qwen2.5-1.5B Base 使用 Ollama 0.40.2 在冻结测试集上真实运行，temperature 为 0，并允许最多两次不消耗环境预算的动作格式纠正；0% 成功率作为后续 rollout、GRPO 和错误恢复训练的起点保留。确定性基线与真实模型结果分别见 [`reports/v0.3_baselines.json`](reports/v0.3_baselines.json) 和 [`reports/v0.3_qwen2.5_1.5b.json`](reports/v0.3_qwen2.5_1.5b.json)，完整协议见 [`docs/evaluation.md`](docs/evaluation.md)。
 
 ## 快速开始
 
@@ -93,6 +107,7 @@ python scripts/validate_examples.py
 python scripts/verify_dataset.py
 python -m unittest discover -s tests -v
 python scripts/run_demo.py
+python scripts/evaluate_baselines.py --agents random,rule
 ```
 
 预期数据检查结果：
@@ -104,7 +119,7 @@ Verified 140 scenarios across 3 disjoint, reproducible splits.
 
 ## 评测协议
 
-后续版本将用同一套 evaluator 比较 Random、Rule-based、Base LLM 与 GRPO Agent，避免不同方法使用不同成功标准。
+所有 Agent 使用同一环境、调用预算、Reward 和 evaluator。后续 GRPO Agent 也会直接接入该协议，避免训练前后使用不同成功标准。
 
 | 指标 | 关注的能力 |
 | --- | --- |
@@ -121,7 +136,7 @@ Verified 140 scenarios across 3 disjoint, reproducible splits.
 | --- | --- | --- |
 | v0.1 | 工具契约、场景协议、示例数据、验证器与 CI | **Completed** |
 | v0.2 | 有状态环境、工具执行器、程序化 Reward 与数据生成器 | **Completed** |
-| v0.3 | Random / Rule-based / Base LLM baseline 与统一 evaluator | Planned |
+| v0.3 | Random / Rule-based / Base LLM baseline 与统一 evaluator | **Completed** |
 | v0.4 | OpenPipe ART 多轮 trajectory 与并发 rollout | Planned |
 | v0.5 | Qwen2.5 + LoRA 的 GRPO smoke test、checkpoint 保存与重载 | Planned |
 | v0.6 | 正式训练、奖励消融、泛化评测与失败分析 | Planned |
@@ -133,9 +148,10 @@ AgentTool-RL/
 ├── data/examples/          # 人工审阅的代表性故障场景
 ├── data/generated/         # 固定 seed 的 train / validation / test
 ├── docs/                   # 架构、状态隔离、奖励与评测协议
+├── reports/                # 可复现的 baseline 指标与逐任务结果
 ├── scripts/                # 数据生成、验证和可执行演示
-├── src/agenttool_rl/       # 环境、工具、Reward 与生成器
-└── tests/                  # 环境、奖励、契约和数据测试
+├── src/agenttool_rl/       # 环境、Agent、Reward、生成器与 evaluator
+└── tests/                  # 环境、Agent、评测、契约和数据测试
 ```
 
 ## 技术栈与边界
