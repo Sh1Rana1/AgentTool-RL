@@ -5,13 +5,13 @@
 [![CI](https://github.com/Sh1Rana1/AgentTool-RL/actions/workflows/ci.yml/badge.svg)](https://github.com/Sh1Rana1/AgentTool-RL/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Milestone](https://img.shields.io/badge/milestone-v0.3.0-5B8DEF)](#当前实现v030)
+[![Milestone](https://img.shields.io/badge/milestone-v0.4.0-5B8DEF)](#当前实现v040)
 
 AgentTool-RL 将微服务故障诊断建模为一个可控、可复现的多轮工具调用任务：Agent 需要在有限调用预算内查询日志、指标、依赖关系与发布记录，引用真实获得的证据，并提交根因和处置方案。
 
 项目的目标不是再做一个“能调用工具”的对话 Demo，而是回答一个更具体的问题：**程序化验证中间步骤，能否通过 GRPO 后训练提升小模型的参数生成、证据一致性与错误恢复能力？**
 
-> 当前里程碑：**v0.3.0** 已完成可执行环境、程序化 Reward、100 / 20 / 20 数据集，以及 Random、Rule-based、Base LLM 三类统一评测入口。OpenPipe ART 训练闭环将在后续版本接入。
+> 当前里程碑：**v0.4.0** 已将有状态环境接入 OpenPipe ART，完成多轮 trajectory 构建、同场景分组并发采样和真实 Qwen2.5-1.5B 冒烟测试。GRPO / LoRA 参数更新与 checkpoint 属于 v0.5。
 
 ## 为什么做这个项目
 
@@ -71,7 +71,7 @@ flowchart LR
 
 这条轨迹可以同时回答：任务是否完成、参数是否合法、证据是否真实获得、错误是否被修正，以及完成任务消耗了多少次调用。
 
-## 当前实现：v0.3.0
+## 当前实现：v0.4.0
 
 - 定义 5 个版本化工具契约：`query_logs`、`query_metrics`、`get_dependencies`、`get_recent_deployments`、`submit_diagnosis`；
 - 实现带调用预算的 `IncidentEnvironment`，支持五类工具的确定性执行、完整 trajectory 记录和终止 / 截断状态；
@@ -82,6 +82,10 @@ flowchart LR
 - 实现 Random、Rule-based 和 OpenAI-compatible Base LLM Agent，共用相同的状态接口和 episode runner；
 - 统一计算任务成功率、参数合法率、语义准确率、证据有效性、错误恢复率、调用成本和 Reward；
 - 在冻结 test split 上产出可复现的逐 episode JSON 与 Markdown 报告；
+- 将环境封装为 ART 多轮 rollout，原样保留可训练 assistant `Choice` 及带 `tool_call_id` 的环境反馈；
+- 为每个 scenario 构建独立 `TrajectoryGroup`，支持同场景多轨迹并发采样，供后续 GRPO 计算组内相对优势；
+- 将程序化 Reward、成功、根因、证据覆盖、错误恢复和格式重试指标写入 ART trajectory；
+- 通过 ART 0.5.20 与本地 Qwen2.5-1.5B/Ollama 完成真实冒烟测试，输出可审计的 `Trajectory.for_logging()` 报告；
 - 自动测试覆盖隐藏状态隔离、伪造 evidence、错误恢复、预算耗尽、数据确定性、Agent 行为和指标聚合。
 
 ## V0.3 Baseline
@@ -98,7 +102,7 @@ Rule-based 针对五类已知模板编写，用于验证环境可解性，并非
 
 ## 快速开始
 
-当前版本无第三方运行时依赖：
+核心环境无第三方运行时依赖：
 
 ```bash
 git clone https://github.com/Sh1Rana1/AgentTool-RL.git
@@ -109,6 +113,15 @@ python -m unittest discover -s tests -v
 python scripts/run_demo.py
 python scripts/evaluate_baselines.py --agents random,rule
 ```
+
+需要采集 ART trajectory 时，安装可选依赖并运行本地冒烟测试：
+
+```bash
+pip install -e ".[art]"
+python scripts/smoke_art_rollout.py --model qwen2.5:1.5b
+```
+
+该脚本默认连接 `http://127.0.0.1:11434/v1`，产物见 [`reports/v0.4_art_rollout_smoke.json`](reports/v0.4_art_rollout_smoke.json)，详细的 trajectory 与分组语义见 [`docs/art-rollouts.md`](docs/art-rollouts.md)。
 
 预期数据检查结果：
 
@@ -137,7 +150,7 @@ Verified 140 scenarios across 3 disjoint, reproducible splits.
 | v0.1 | 工具契约、场景协议、示例数据、验证器与 CI | **Completed** |
 | v0.2 | 有状态环境、工具执行器、程序化 Reward 与数据生成器 | **Completed** |
 | v0.3 | Random / Rule-based / Base LLM baseline 与统一 evaluator | **Completed** |
-| v0.4 | OpenPipe ART 多轮 trajectory 与并发 rollout | Planned |
+| v0.4 | OpenPipe ART 多轮 trajectory 与并发 rollout | **Completed** |
 | v0.5 | Qwen2.5 + LoRA 的 GRPO smoke test、checkpoint 保存与重载 | Planned |
 | v0.6 | 正式训练、奖励消融、泛化评测与失败分析 | Planned |
 

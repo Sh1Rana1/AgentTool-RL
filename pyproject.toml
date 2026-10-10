@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agenttool-rl"
-version = "0.3.0"
+version = "0.4.0"
 description = "A verifiable environment for multi-turn tool-use agent reinforcement learning."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,6 +21,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
+art = ["openpipe-art>=0.5.20,<0.6"]
 
 [project.scripts]
 agenttool-validate = "agenttool_rl.validation:main"

@@ -13,6 +13,17 @@ from .llm import ChatBackend
 from .models import StepResult
 
 
+DEFAULT_SYSTEM_PROMPT = (
+    "You are an incident diagnosis agent. On every turn, call exactly one of the "
+    "available tools; never reply with analysis or prose. Use investigation tools "
+    "to collect evidence before calling submit_diagnosis. Never invent evidence IDs. "
+    "When a tool returns an empty result or a recoverable error, choose another valid "
+    "tool call or correct the arguments and retry. Stay within the call budget. The "
+    "final answer must also be a submit_diagnosis tool call. If native tool calls are "
+    "unavailable, return only a JSON object with keys tool and arguments."
+)
+
+
 @dataclass(frozen=True)
 class AgentAction:
     """One tool action proposed by an agent."""
@@ -282,15 +293,7 @@ class BaseLLMAgent:
     """A tool-calling baseline backed by an OpenAI-compatible chat endpoint."""
 
     backend: ChatBackend
-    system_prompt: str = (
-        "You are an incident diagnosis agent. On every turn, call exactly one of the "
-        "available tools; never reply with analysis or prose. Use investigation tools "
-        "to collect evidence before calling submit_diagnosis. Never invent evidence IDs. "
-        "When a tool returns an empty result or a recoverable error, choose another valid "
-        "tool call or correct the arguments and retry. Stay within the call budget. The "
-        "final answer must also be a submit_diagnosis tool call. If native tool calls are "
-        "unavailable, return only a JSON object with keys tool and arguments."
-    )
+    system_prompt: str = DEFAULT_SYSTEM_PROMPT
     max_format_retries: int = 2
     name: str = "base-llm"
     _messages: list[dict[str, Any]] = field(init=False, repr=False, default_factory=list)
@@ -363,7 +366,7 @@ class BaseLLMAgent:
             content = response.content or ""
             self._messages.append({"role": "assistant", "content": content})
             try:
-                payload = _parse_json_action(content)
+                payload = parse_json_action(content)
                 return AgentAction(
                     payload["tool"],
                     payload["arguments"],
@@ -405,7 +408,7 @@ class BaseLLMAgent:
         self._pending_tool_call_id = None
 
 
-def _parse_json_action(content: str) -> dict[str, Any]:
+def parse_json_action(content: str) -> dict[str, Any]:
     stripped = content.strip()
     if stripped.startswith("```"):
         lines = stripped.splitlines()

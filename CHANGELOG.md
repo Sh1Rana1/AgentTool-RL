@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.0] - 2026-10-10
+
+### Added
+
+- OpenPipe ART 0.5.x adapter for stateful multi-turn tool-use rollouts.
+- Same-scenario `TrajectoryGroup` construction and concurrent rollout collection.
+- Trainable OpenAI assistant choices with non-trainable environment observations.
+- Programmatic trajectory reward, behavioral metrics, metadata, and partial-error logs.
+- Bounded action-format correction without consuming environment call budget.
+- Real ART 0.5.20 + Qwen2.5-1.5B/Ollama smoke trajectory.
+- Unit tests for trajectory construction, correction history, and concurrent grouping.
+
+### Changed
+
+- Shared the Base LLM system prompt and JSON action parser with the ART adapter.
+- Added ART as an optional dependency so the deterministic environment remains lightweight.
+
 ## [0.3.0] - 2026-09-22
 
 ### Added
